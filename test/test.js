@@ -6,9 +6,13 @@ const app = require('../services/receiver.js');
 describe('Test Bot flow Survey1', () => {
   
   const server = app.listen(process.env.PORT || 88);
-
+  let state = 1;
   before(() => {
     console.log('Test starting!');
+  });
+
+  afterEach(() => {
+    state++;
   });
 
   after(() => {
@@ -17,34 +21,29 @@ describe('Test Bot flow Survey1', () => {
   });
   
   it('Start the conversation and should receive Accept Message',  (done) => {
-    let state = 1;
     sender(mocks.referral);
-    app.on('message', async ({message}) => {
-      switch (state) {
-        case 1:
-          message.should.eql(mocks.acceptMessage)
-          await sender(mocks.acceptEcho);
-          await sender(mocks.acceptPostback);
-          break;
-        case 2:
-          message.should.eql(mocks.questionMessage)
-          await sender(mocks.questionEcho);
-          await sender(mocks.questionPostback);
-          break;
-        case 3:
-          message.should.eql(mocks.thanksMessage)
-          sender(mocks.thanksEcho);
-          break;
-        case 4:
-          message.should.eql(mocks.endMessage)
-          sender(mocks.endEcho);
-          done();
-          break;
-        default:
-          break;
-      }
-        state++;
+    app.on(`message${state}`, ({message}) => {
+      message.should.eql(mocks.acceptMessage)
+      sender(mocks.acceptEcho);
+      done()
     })
-  }).timeout(10000);
+  }).timeout(5000);
 
+  it('Reply "I Accept", should receive first question',  (done) => {
+    sender(mocks.acceptPostback);
+    app.on(`message${state}`, ({message}) => {
+      message.should.eql(mocks.questionMessage)
+      sender(mocks.questionEcho);
+      done()
+    })
+  }).timeout(5000);
+
+  it('Reply "yes", should recive "Thanks" and end the conversation',  (done) => {
+    sender(mocks.questionPostback);
+    app.on(`message${state}`, ({message}) => {
+      message.should.eql(mocks.thanksMessage)
+      sender(mocks.thanksEcho);
+      done()
+    })
+  }).timeout(5000);
 });
